@@ -24,13 +24,9 @@ Within a **time limit**, Astrobee will be moved from the **starting position** (
 
 **Note** Points will be added **as long as the Astrobee is moving through the Oasis Zone**.
 
----
-
 ### Game Flow Image
 
-![alt text](image.png)
-
----
+![alt text](README_Images/image.png)
 
 ### Preconditions
 
@@ -44,15 +40,13 @@ Within a **time limit**, Astrobee will be moved from the **starting position** (
 
 **Note** Astrobee does not have to go through the Oasis Zone
 
----
-
 ### Coordinate System
 
-![KIBO RPC Coordinate System](image-1.png)
+![KIBO RPC Coordinate System](README_Images/image-1.png)
 
 ## Github Version Control Conventions
 
-> ![IMPORTANT]
+> [!IMPORTANT]
 >
 > All of the commands in this section should be typed in the terminal
 
@@ -101,6 +95,7 @@ git branch
 ```
 
 The terminal will output something similar to this:
-![Terminal Output](image-2.png)
 
-In this instance the \* <span style="color:green">ReadMe</span> is my current branch
+![Terminal Output](README_Images/image-2.png)
+
+In this instance the \* ReadMe is my current branch (since the text is green)
