@@ -7,15 +7,11 @@ This is where you will login and submit your code into the simulation
 
 ## Game Flow:
 
-> To control NASA's Astrobee in the Preliminary round, please create a program to
-> complete the following game using JAXA's web simulation environment.
+To control NASA's Astrobee in the Preliminary round, please create a program to complete the following game using JAXA's web simulation environment.
 
 ### Game Description:
 
-> Within a **time limit**, Astrobee will be moved from the **starting position** (_dock station_)
-> to a candidate location in Kibo where the **treasure** is hidden, and all **images** will be
-> read. Astrobee will then be moved to the **astronauts' site**, where it will read the **images of the treasure and landmarks in the astronauts' possession** to provide clues to **locate the real treasure**. After reading the images, the player **moves to the location where the real treasure is hidden, takes a picture of the treasure, flashes the Signal Lights to signal that he/she has found the treasure**, and tells the astronaut where
-> the treasure is hidden to complete the mission.
+Within a **time limit**, Astrobee will be moved from the **starting position** (_dock station_) to a candidate location in Kibo where the **treasure** is hidden, and all **images** will be read. Astrobee will then be moved to the **astronauts' site**, where it will read the **images of the treasure and landmarks in the astronauts' possession** to provide clues to **locate the real treasure**. After reading the images, the player **moves to the location where the real treasure is hidden, takes a picture of the treasure, flashes the Signal Lights to signal that he/she has found the treasure**, and tells the astronaut where the treasure is hidden to complete the mission.
 
 ### Key Takeaway:
 
@@ -38,29 +34,16 @@ This is where you will login and submit your code into the simulation
 
 ### Preconditions
 
-| #   | Content                                                                                |
-| --- | -------------------------------------------------------------------------------------- |
-| 1   | The starting position is the Dock Station, and the timer starts once Astrobee undocks. |
-| 2   |
+| #   | Content                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | The starting position is the Dock Station, and the timer starts once Astrobee undocks.                                                                                                                                                                                                                                                                                                                                                    |
+| 2   | - There are 11 types of Lost Item images placed in each area. Breakdown: (3 Tresure Items, 8 Landmark Items) <br> - Prepare an AR tag on the same plane as the printed surface of Lost Item. <br> - The search area for Lost Item (hereinafter referred to as "Area") is limited to four locations. <br> - The area is specified as a plane, and one Lost Item is placed somewhere within the Area. <br> - Lost Item placement is random. |
+| 3   | The Target Item is randomly selected from one of the Tresure Items in the game.                                                                                                                                                                                                                                                                                                                                                           |
+| 4   |
 
-- There are 11 types of Lost Item images placed in each area. Breakdown: (3 Tresure Items, 8 Landmark Items)
-- Prepare an AR tag on the same plane as the printed surface of Lost Item.
-- The search area for Lost Item (hereinafter referred to as "Area") is limited to four locations.
-- The area is specified as a plane, and one Lost Item is placed somewhere within the Area.
-- Lost Item placement is random.|
-  | 3 | The Target Item is randomly selected from one of the Tresure Items in the game. |
-  | 4 |
-  The following information wree presented in issues. For more information on AR tags and Lost Item, please refer to [Scanning AR Tag](https://github.com/oc-robotics/KIBO_RPC-2025/issues/4).
-
-1. Orientation of the position of the starting point
-2. Report position to an astronaut
-3. Location and size of each area
-4. Total number of Areas
-5. Types of images to be placed and examples of difficulty levels
-6. Location and size of the oasis zones
-7. Parameters for a given angle and distance |
-   | 5 |
-   Oasis Zones are set up along the route, where points are added according to the time spent in the zone. This oasis zone is given as a precondition. [Detail of Oasis Zone Here](https://github.com/oc-robotics/KIBO_RPC-2025/issues/7)|
+The following information wree presented in issues. For more information on AR tags and Lost Item, please refer to [Scanning AR Tag](https://github.com/oc-robotics/KIBO_RPC-2025/issues/4). <br> <br> 1. Orientation of the position of the starting point <br> 2. Report position to an astronaut <br> 3. Location and size of each area <br> 4. Total number of Areas <br> 5. Types of images to be placed and examples of difficulty levels <br> 6. Location and size of the oasis zones <br> 7. Parameters for a given angle and distance |
+| 5 |
+Oasis Zones are set up along the route, where points are added according to the time spent in the zone. The oasis zone is given as a precondition. [Detail of Oasis Zone Here](https://github.com/oc-robotics/KIBO_RPC-2025/issues/7)|
 
 **Note** Astrobee does not have to go through the Oasis Zone
 
