@@ -5,15 +5,15 @@
 This is where you will login and submit your code into the simulation
 [KIBO RPC Website](https://jaxa.krpc.jp)
 
-## Game Flow:
+## Game Flow
 
 To control NASA's Astrobee in the Preliminary round, please create a program to complete the following game using JAXA's web simulation environment.
 
-### Game Description:
+### Game Description
 
 Within a **time limit**, Astrobee will be moved from the **starting position** (_dock station_) to a candidate location in Kibo where the **treasure** is hidden, and all **images** will be read. Astrobee will then be moved to the **astronauts' site**, where it will read the **images of the treasure and landmarks in the astronauts' possession** to provide clues to **locate the real treasure**. After reading the images, the player **moves to the location where the real treasure is hidden, takes a picture of the treasure, flashes the Signal Lights to signal that he/she has found the treasure**, and tells the astronaut where the treasure is hidden to complete the mission.
 
-### Key Takeaway:
+### Key Takeaway
 
 1. Start from the Docking Station
 2. After starting, Astrobee will patrol each stations (_candidate sites_) where **treasures** are hidden
