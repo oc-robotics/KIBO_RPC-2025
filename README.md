@@ -5,6 +5,8 @@
 This is where you will login and submit your code into the simulation
 [KIBO RPC Website](https://jaxa.krpc.jp)
 
+## [Programming Development](/docs/PROGRAM_DEVELOPMENT.md)
+
 ## Game Flow
 
 To control NASA's Astrobee in the Preliminary round, please create a program to complete the following game using JAXA's web simulation environment.
