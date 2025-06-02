@@ -1,11 +1,11 @@
-[text](/docs/PROGRAM_DEVELOPMENT.md)
-
 # KIBO_RPC-2025
 
 ## KIBO RPC Website
 
 This is where you will login and submit your code into the simulation
 [KIBO RPC Website](https://jaxa.krpc.jp)
+
+## [Programming Development](/docs/PROGRAM_DEVELOPMENT.md)
 
 ## Game Flow
 
