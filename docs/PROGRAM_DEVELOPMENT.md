@@ -1,5 +1,7 @@
 # Program Development
 
+## [Setting up Android Studio](https://github.com/oc-robotics/KIBO_RPC-2025/issues/1)
+
 ## Building Application
 
 1. Launch the Android Studio
