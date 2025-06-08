@@ -5,7 +5,7 @@
 1. Launch the Android Studio
 2. Open the folder **KIBO_RPC-2025\KIBO APK\app**
 
-![](../README_images/image-3.png)
+![](../README_Images/image-3.png)
 
 3. Click **app** on the **Project** window
 
