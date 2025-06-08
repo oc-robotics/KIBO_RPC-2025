@@ -5,6 +5,12 @@
 This is where you will login and submit your code into the simulation
 [KIBO RPC Website](https://jaxa.krpc.jp)
 
+## [Setting up Android Studio](https://github.com/oc-robotics/KIBO_RPC-2025/issues/1)
+> [!IMPORTANT]
+>
+> Mac users still under review on how to set up Android Studio
+> For the time being, edit and contribute through github under a separate branch and DM Jason so he can test the code for you
+
 ## [Programming Development](/docs/PROGRAM_DEVELOPMENT.md)
 
 ## Game Flow
