@@ -62,4 +62,4 @@ Memo: Comments that you wish to make regarding this test-run of the program
 
 ### Tutoial Video
 
-[![Building APK and Simulator](https://www.youtube.com/watch?v=LeC3sIL1sWE)](https://www.youtube.com/watch?v=LeC3sIL1sWE)
+[![Building APK and Simulator](https://img.youtube.com/vi/LeC3sIL1sWE/0.jpg)](https://www.youtube.com/watch?v=LeC3sIL1sWE)
