@@ -11,12 +11,13 @@
 
 ![](../README_Images/image-4.png)
 
-4. Select **Build** --> **Make Module 'app'**
+4. Open up the **YourService.java** file
+
+![](../README_Images/image-6.png)
+
+5. Select **Build** --> **Make Module 'app'**
 
 ![](../README_Images/image-5.png)
 
-
 > Note:
-You will find the apk file after building it under ```app\build\outputs\apk\debug\app-debug.apk```
-
-
+> You will find the apk file after building it under `app\build\outputs\apk\debug\app-debug.apk`
