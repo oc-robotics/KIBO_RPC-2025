@@ -52,9 +52,9 @@ Within a **time limit**, Astrobee will be moved from the **starting position** (
 
 [![Explanation of Sample APK](https://img.youtube.com/vi/zprQ91S0zHk/0.jpg)](https://www.youtube.com/watch?v=zprQ91S0zHk)
 
-[![Improving SampleAPK](https://www.youtube.com/watch?v=vQh3cJ-QbMs)](https://www.youtube.com/watch?v=vQh3cJ-QbMs)
+[![Improving SampleAPK](https://img.youtube.com/vi/vQh3cJ-QbMs/0.jpg)](https://www.youtube.com/watch?v=vQh3cJ-QbMs)
 
-[![Branch and Exception Handling](https://www.youtube.com/watch?v=Ig-qKD4jFu4)](https://www.youtube.com/watch?v=Ig-qKD4jFu4)
+[![Branch and Exception Handling](https://img.youtube.com/vi/Ig-qKD4jFu4/0.jpg)](https://www.youtube.com/watch?v=Ig-qKD4jFu4)
 
 ## Github Version Control Conventions
 
