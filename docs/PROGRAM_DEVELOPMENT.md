@@ -56,3 +56,6 @@
 Memo: Comments that you wish to make regarding this test-run of the program
 
 3. Viewing Result of the Test
+   1. Click the **Simulation Viewer**
+      ![](../ReadMe_Images/image-9.png)
+   2. Copy the password shown in the popup and paste it when the Simulation Viewer asks for it
