@@ -63,5 +63,3 @@ Memo: Comments that you wish to make regarding this test-run of the program
 ### Tutoial Video
 
 ![Building APK and Simulator](https://www.youtube.com/watch?v=LeC3sIL1sWE)
-
-![Explanation of Sample APK](https://www.youtube.com/watch?v=zprQ91S0zHk)
