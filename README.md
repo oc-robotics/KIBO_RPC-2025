@@ -9,6 +9,15 @@ This is where you will login and submit your code into the simulation
 
 ## [Programming Development](/docs/PROGRAM_DEVELOPMENT.md)
 
+## Details to Coordinates, Instructions, and required Information
+
+- ![Area of Stations for Scanning Items](https://github.com/oc-robotics/KIBO_RPC-2025/issues/9)
+- ![Initial Position and Astronaut Positions](https://github.com/oc-robotics/KIBO_RPC-2025/issues/8)
+- ![Movement through Oasis Zone](https://github.com/oc-robotics/KIBO_RPC-2025/issues/7)
+- ![Mapping Items with Coordinates](https://github.com/oc-robotics/KIBO_RPC-2025/issues/7)
+- ![Treasure and Landmark Item Detection](https://github.com/oc-robotics/KIBO_RPC-2025/issues/6)
+- ![Scanning AR Tag](https://github.com/oc-robotics/KIBO_RPC-2025/issues/4)
+
 ## Game Flow
 
 To control NASA's Astrobee in the Preliminary round, please create a program to complete the following game using JAXA's web simulation environment.
