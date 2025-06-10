@@ -59,3 +59,7 @@ Memo: Comments that you wish to make regarding this test-run of the program
    1. Click the **Simulation Viewer**
       ![](../README_Images/image-9.png)
    2. Copy the password shown in the popup and paste it when the Simulation Viewer asks for it
+
+### Tutoial Video
+
+[![Building APK and Simulator](https://img.youtube.com/vi/LeC3sIL1sWE/0.jpg)](https://www.youtube.com/watch?v=LeC3sIL1sWE)
