@@ -52,6 +52,6 @@ git branch
 
 The terminal will output something similar to this:
 
-![Terminal Output](README_Images/image-2.png)
+![Terminal Output](../README_Images/image-2.png)
 
 In this instance the \* ReadMe is my current branch (since the text is green)
