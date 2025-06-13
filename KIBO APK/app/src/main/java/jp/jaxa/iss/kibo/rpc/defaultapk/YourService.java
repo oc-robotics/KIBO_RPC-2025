@@ -13,6 +13,16 @@ import org.opencv.core.Mat;
  */
 
 public class YourService extends KiboRpcService {
+
+    private final Quaternion quaternion = new Quaternion(0f, 0f, -0.707f, 0.707f);
+    private final Point[] cords =
+            {
+                    new Point(11d, -10.58d, 5d),
+                    new Point(11d, -8d, 2.76203d),
+                    new Point(11d, -8d, 3.76093d),
+                    new Point(9.866984d, -7d, 5d)
+            };
+
     @Override
     protected void runPlan1() {
         // The mission starts.
@@ -20,7 +30,6 @@ public class YourService extends KiboRpcService {
 
         // Move to a point.
         Point point = new Point(10.9d, -9.92284d, 5.195d);
-        Quaternion quaternion = new Quaternion(0f, 0f, -0.707f, 0.707f);
         api.moveTo(point, quaternion, false);
 
         // Get a camera image.
