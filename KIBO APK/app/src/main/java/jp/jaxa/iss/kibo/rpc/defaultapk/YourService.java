@@ -17,8 +17,10 @@ import org.opencv.android.Utils;
 import org.opencv.aruco.Aruco;
 import org.opencv.aruco.Dictionary;
 import org.opencv.calib3d.Calib3d;
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 /**
@@ -64,6 +66,10 @@ public class YourService extends KiboRpcService {
         Point point = new Point(10.9d, -9.92284d, 5.195d);
         Quaternion quaternion = new Quaternion(0f, 0f, -0.707f, 0.707f);
         api.moveTo(point, quaternion, false);
+
+        /* *************************************************** */
+        /* OpenCV image processes from tutorial */
+        /* *************************************************** */
 
         // Get a camera image.
         Mat image = api.getMatNavCam();
@@ -111,14 +117,64 @@ public class YourService extends KiboRpcService {
 
         // Number of matches for each template
         int templateMatchCnt[] = new int[templates.length];
+        int matchCnt = 0;
 
-        // Get the number of tempplate matches
+        // Get the number of template matches
         for (int tempNum = 0; tempNum < templates.length; tempNum++){
             // Number of matches
-            int matchCnt = 0;
+            List<org.opencv.core.Point> matches = new ArrayList<>();
 
             // Loading template image and target Image
+            Mat template = templates[tempNum].clone();
+            Mat targetImg = undistortImg.clone();
+
+            int widthMin = 20;
+            int widthMax = 100;
+            int changeWidth = 5;
+            int changeAngle = 45;
+
+            for (int size = widthMin; size <= widthMax; size += changeWidth){
+                for (int angle = 0; angle <= 360; angle += changeAngle){
+                    Mat resizedTemp = resizeImg(template, size);
+                    Mat rotateResizedTemp = rotateImg(resizedTemp, angle);
+
+                    // result outputs value from 0-1
+                    // 0: bad match
+                    // 1: perfect match
+                    Mat result = new Mat();
+                    Imgproc.matchTemplate(targetImg, rotateResizedTemp, result, Imgproc.TM_CCOEFF_NORMED);
+
+                    // Get coordinates with similarity greater than or equal to the threshold
+                    double threshold = 0.7;
+                    Core.MinMaxLocResult mmlr = Core.minMaxLoc(result);
+                    double maxVal = mmlr.maxVal;
+                    if (maxVal >= threshold){
+                        // Extract only results greater than or euqal to the threshold
+                        Mat thresholdedResult = new Mat();
+                        Imgproc.threshold(result, thresholdedResult, threshold, 1.0, Imgproc.THRESH_TOZERO);
+
+                        // Get coordinates of the matched location
+                        for (int y = 0; y < thresholdedResult.rows(); y++){
+                            for (int x = 0; x < thresholdedResult.cols(); x++){
+                                if (thresholdedResult.get(y, x)[0] > 0){
+                                    matches.add(new org.opencv.core.Point(x, y));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Avoid detecting the same location multiple times
+            List<org.opencv.core.Point> filteredMatches = removeDuplicates(matches);
+            matchCnt++;
+
+            // Number of matches for each template
+            templateMatchCnt[tempNum] = matchCnt;
         }
+
+
+
 
         /*
          * *****************************************************************************
@@ -184,5 +240,71 @@ public class YourService extends KiboRpcService {
     // You can add your method.
     private String yourMethod() {
         return "your method";
+    }
+
+    // Resizing the image to match the size of the template
+    private Mat resizeImg(Mat img, int width){
+        int height = (int) (img.rows() * ((double) width / img.cols()));
+        Mat resizedImg = new Mat();
+        Imgproc.resize(img, resizedImg, new Size(width, height));
+
+        return resizedImg;
+    }
+
+    // Rotating the image to trial-and-error through pattern matching process
+    private Mat rotateImg(Mat img, int angle){
+        org.opencv.core.Point center = new org.opencv.core.Point(img.cols() / 2.0, img.rows() / 2.0);
+        Mat rotatedMat = Imgproc.getRotationMatrix2D(center, angle, 1.0);
+        Mat rotImg = new Mat();
+        Imgproc.warpAffine(img, rotImg, rotatedMat, img.size());
+
+        return rotImg;
+    }
+
+    // remove the duplicate since pattern matching could double count
+    private List<org.opencv.core.Point> removeDuplicates(List<org.opencv.core.Point> points){
+        double length = 10; // within 10 px
+        List<org.opencv.core.Point> filteredList = new ArrayList<>();
+
+        for (org.opencv.core.Point point: points){
+            boolean isInclude = false;
+            for (org.opencv.core.Point checkPoint: filteredList){
+                double distance = calculateDistance(point, checkPoint);
+
+                if (distance <= length){
+                    isInclude = true;
+                    break;
+                }
+            }
+
+            if (!isInclude){
+                filteredList.add(point);
+            }
+        }
+
+        return filteredList;
+    }
+
+    // finding the distance between 2 points (to remove the duplicates)
+    private double calculateDistance(org.opencv.core.Point p1, org.opencv.core.Point p2){
+        double dx = p1.x - p2.x;
+        double dy = p1.y - p2.y;
+
+        return Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+    }
+
+    // Get the maximum value of an array
+    private int getMaxIndex(int[] array){
+        int max = 0;
+        int maxIndex = 0;
+
+        for (int i = 0; i < array.length; i++){
+            if (array[i] > max){
+                max = array[i];
+                maxIndex = i;
+            }
+        }
+
+        return maxIndex;
     }
 }
