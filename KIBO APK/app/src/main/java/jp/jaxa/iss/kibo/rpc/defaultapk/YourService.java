@@ -16,13 +16,28 @@ public class YourService extends KiboRpcService {
     @Override
     protected void runPlan1() {
         // The mission starts.
+        Point[] points =
+                {
+                        new Point(10.425d, -10.2d, 4.445d),
+                        new Point(10.925d, -9.5d, 4.945d),
+                        new Point(10.425d, -8.45d, 4.945d),
+                        new Point(10.925d, -7.4d, 4.325d)
+                };
+
+
+
         api.startMission();
 
         // Move to a point.
         Point point = new Point(10.9d, -9.92284d, 5.195d);
-        Quaternion quaternion = new Quaternion(0f, 0f, -0.707f, 0.707f);
-        api.moveTo(point, quaternion, false);
+        Quaternion quaternion = new Quaternion(0f, 0f, 0.707f, 0.707f);
+//        api.moveTo(point, quaternion, false);
 
+
+        for (Point cord : points)
+        {
+            api.moveTo(cord, quaternion, false);
+        }
         // Get a camera image.
         Mat image = api.getMatNavCam();
 
