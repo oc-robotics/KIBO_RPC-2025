@@ -3,6 +3,7 @@ package jp.jaxa.iss.kibo.rpc.defaultapk;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
+import gov.nasa.arc.astrobee.Kinematics;
 import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
 
 import java.io.IOException;
@@ -15,6 +16,7 @@ import gov.nasa.arc.astrobee.types.Quaternion;
 
 import org.opencv.android.Utils;
 import org.opencv.aruco.Aruco;
+import org.opencv.aruco.DetectorParameters;
 import org.opencv.aruco.Dictionary;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Core;
@@ -73,24 +75,78 @@ public class YourService extends KiboRpcService {
 
         // Get a camera image.
         Mat image = api.getMatNavCam();
+        api.saveMatImage(image, "Area1.png");
 
         // Detect AR Tag
         Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250);
         List<Mat> corners = new ArrayList<>();
         Mat ids = new Mat();
-        Aruco.detectMarkers(image, dictionary, corners, ids);
+        DetectorParameters parameters = DetectorParameters.create();
+        Aruco.detectMarkers(image, dictionary, corners, ids, parameters);
 
         // Get camera matrix
         Mat cameraMatrix = new Mat(3, 3, CvType.CV_64F);
         cameraMatrix.put(0, 0, api.getNavCamIntrinsics()[0]);
+
         // Get Lens distortion parameters
         Mat cameraCoefficients = new Mat(1, 5, CvType.CV_64F);
         cameraCoefficients.put(0, 0, api.getNavCamIntrinsics()[1]);
         cameraCoefficients.convertTo(cameraCoefficients, CvType.CV_64F);
 
+        // Get Pose Estimation
+        float markerLength = 0.05f; //meters
+        Mat rotationVectors = new Mat();
+        Mat translationVectors = new Mat();
+        Aruco.estimatePoseSingleMarkers(corners, markerLength, cameraMatrix, cameraCoefficients, rotationVectors, translationVectors);
+
+        // Convert rotation and translation vectors to Point and Quaternion
+        if (ids.rows() > 0){
+            // rotation
+            double[] rotationVectorArray = new double[3];
+            rotationVectors.row(0).get(0, 0, rotationVectorArray);
+            Mat rotation = new Mat(3, 1, CvType.CV_64F);
+            rotation.put(0, 0, rotationVectorArray);
+            Mat rotationMatrix = new Mat();
+            Calib3d.Rodrigues(rotation, rotationMatrix);
+            quaternion = rotationMatrixToAstrobeeQuaternion(rotationMatrix);
+
+            // translation
+            double[] translationVectorArray = new double[3];
+            translationVectors.row(0).get(0, 0, translationVectorArray);
+            point = new Point((float) translationVectorArray[0], (float) translationVectorArray[1], (float) translationVectorArray[2]);
+
+            /*
+            * Getting Robot's current Position
+            * TranslationVectors Coordiante System:
+            * Origin: Located at camera's optical center
+            * X-axis: Points to the right of camera
+            * Y-axis: Points down of camera
+            * Z-axis: Points forward (away from the camera)
+            */
+            Kinematics currentKinematrics = api.getRobotKinematics();
+            point = new Point(
+                    (float) (currentKinematrics.getPosition().getX() - translationVectorArray[0]),
+                    (float) (currentKinematrics.getPosition().getY() - translationVectorArray[2]),
+                    (float) (currentKinematrics.getPosition().getZ() - translationVectorArray[1])
+            );
+            float theta = (float) (-Math.PI / 2.0);
+            Quaternion offsetQuat = new Quaternion(
+                    (float) Math.sin(theta / 2.0),
+                    0.0f,
+                    0.0f,
+                    (float) Math.cos(theta / 2.0)
+            );
+            quaternion = multiplyQuaternions(offsetQuat, quaternion);
+            api.moveTo(point, quaternion, true);
+        }
+
+        image = api.getMatNavCam();
+        api.saveMatImage(image, "Area1Closer.png");
+
         // Undistorted image
         Mat undistortImg = new Mat();
         Calib3d.undistort(image, undistortImg, cameraMatrix, cameraCoefficients);
+        api.saveMatImage(undistortImg, "Area1UndistortImage.png");
 
         // Pattern Matching
         // Load template images
@@ -117,7 +173,6 @@ public class YourService extends KiboRpcService {
 
         // Number of matches for each template
         int templateMatchCnt[] = new int[templates.length];
-        int matchCnt = 0;
 
         // Get the number of template matches
         for (int tempNum = 0; tempNum < templates.length; tempNum++){
@@ -145,7 +200,7 @@ public class YourService extends KiboRpcService {
                     Imgproc.matchTemplate(targetImg, rotateResizedTemp, result, Imgproc.TM_CCOEFF_NORMED);
 
                     // Get coordinates with similarity greater than or equal to the threshold
-                    double threshold = 0.7;
+                    double threshold = 0.8;
                     Core.MinMaxLocResult mmlr = Core.minMaxLoc(result);
                     double maxVal = mmlr.maxVal;
                     if (maxVal >= threshold){
@@ -167,31 +222,13 @@ public class YourService extends KiboRpcService {
 
             // Avoid detecting the same location multiple times
             List<org.opencv.core.Point> filteredMatches = removeDuplicates(matches);
-            matchCnt++;
 
             // Number of matches for each template
-            templateMatchCnt[tempNum] = matchCnt;
+            templateMatchCnt[tempNum] = filteredMatches.size();
         }
 
-
-
-
-        /*
-         * *****************************************************************************
-         * ***
-         */
-        /*
-         * Write your code to recognize the type and number of landmark items in each
-         * area!
-         */
-        /* If there is a treasure item, remember it. */
-        /*
-         * *****************************************************************************
-         * ***
-         */
-
-        // When you recognize landmark items, let’s set the type and number.
-        api.setAreaInfo(1, "item_name", 1);
+        int mostMatchTemplateNum = getMaxIndex(templateMatchCnt);
+        api.setAreaInfo(1, TEMPLATE_NAME[mostMatchTemplateNum], templateMatchCnt[mostMatchTemplateNum]);
 
         /* **************************************************** */
         /* Let's move to each area and recognize the items. */
@@ -306,5 +343,68 @@ public class YourService extends KiboRpcService {
         }
 
         return maxIndex;
+    }
+
+    // converting rotational matrix to Quaternion for Astrobee api
+    private static Quaternion rotationMatrixToAstrobeeQuaternion(Mat R) {
+        double m00 = R.get(0, 0)[0];
+        double m01 = R.get(0, 1)[0];
+        double m02 = R.get(0, 2)[0];
+        double m10 = R.get(1, 0)[0];
+        double m11 = R.get(1, 1)[0];
+        double m12 = R.get(1, 2)[0];
+        double m20 = R.get(2, 0)[0];
+        double m21 = R.get(2, 1)[0];
+        double m22 = R.get(2, 2)[0];
+
+        double trace = m00 + m11 + m22;
+        double w, x, y, z;
+        if (trace > 0) {
+            double s = Math.sqrt(trace + 1.0) * 2.0; // s = 4 * w
+            w = 0.25 * s;
+            x = (m21 - m12) / s;
+            y = (m02 - m20) / s;
+            z = (m10 - m01) / s;
+        } else if ((m00 > m11) && (m00 > m22)) {
+            double s = Math.sqrt(1.0 + m00 - m11 - m22) * 2.0; // s = 4 * x
+            w = (m21 - m12) / s;
+            x = 0.25 * s;
+            y = (m01 + m10) / s;
+            z = (m02 + m20) / s;
+        } else if (m11 > m22) {
+            double s = Math.sqrt(1.0 + m11 - m00 - m22) * 2.0; // s = 4 * y
+            w = (m02 - m20) / s;
+            x = (m01 + m10) / s;
+            y = 0.25 * s;
+            z = (m12 + m21) / s;
+        } else {
+            double s = Math.sqrt(1.0 + m22 - m00 - m11) * 2.0; // s = 4 * z
+            w = (m10 - m01) / s;
+            x = (m02 + m20) / s;
+            y = (m12 + m21) / s;
+            z = 0.25 * s;
+        }
+        // The Astrobee Quaternion constructor takes arguments as (x, y, z, w)
+        return new Quaternion((float) x, (float) y, (float) z, (float) w);
+    }
+
+    private static Quaternion multiplyQuaternions(Quaternion q1, Quaternion q2) {
+        float w1 = q1.getW();
+        float x1 = q1.getX();
+        float y1 = q1.getY();
+        float z1 = q1.getZ();
+
+        float w2 = q2.getW();
+        float x2 = q2.getX();
+        float y2 = q2.getY();
+        float z2 = q2.getZ();
+
+        // Quaternion multiplication formula
+        float w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2;
+        float x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2;
+        float y = w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2;
+        float z = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2;
+
+        return new Quaternion(x, y, z, w);
     }
 }
