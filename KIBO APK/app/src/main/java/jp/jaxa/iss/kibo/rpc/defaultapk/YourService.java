@@ -76,7 +76,7 @@ public class YourService extends KiboRpcService {
         api.startMission();
 
         // Move to area 1
-        Point point = new Point(10.9d, -9.92284d, 5.195d);
+        Point point =  new Point(11d, -10.58d, 5d);
         Quaternion quaternion = new Quaternion(0f, 0f, -0.707f, 0.707f);
         api.moveTo(point, quaternion, false);
 
@@ -186,6 +186,7 @@ public class YourService extends KiboRpcService {
         }
         Mat croppedImage = (boundingRect != null) ? new Mat(undistortImg, boundingRect) : new Mat();
         croppedImage = resizeImg(croppedImage, 500);
+        api.saveMatImage(croppedImage, "croppedImage.png");
 
         // Pattern Matching
         // Load Lost Item images
