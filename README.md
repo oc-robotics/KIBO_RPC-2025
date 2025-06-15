@@ -13,8 +13,7 @@ This is where you will login and submit your code into the simulation
 
 ## Details to Coordinates, Instructions, and required Information
 
-- [Area of Stations for Scanning Items](https://github.com/oc-robotics/KIBO_RPC-2025/issues/9)
-- [Initial Position and Astronaut Positions](https://github.com/oc-robotics/KIBO_RPC-2025/issues/8)
+- [Astrobee Coordinates](https://github.com/oc-robotics/KIBO_RPC-2025/issues/9)
 - [Movement through Oasis Zone](https://github.com/oc-robotics/KIBO_RPC-2025/issues/7)
 - [Mapping Items with Coordinates](https://github.com/oc-robotics/KIBO_RPC-2025/issues/7)
 - [Treasure and Landmark Item Detection](https://github.com/oc-robotics/KIBO_RPC-2025/issues/6)
