@@ -23,6 +23,8 @@ import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.Rect;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
@@ -68,7 +70,6 @@ public class YourService extends KiboRpcService {
             "emerald"
     };
 
-
     @Override
     protected void runPlan1() {
         // The mission starts.
@@ -83,17 +84,6 @@ public class YourService extends KiboRpcService {
         /* ******* OpenCV image processes from tutorial ******* */
         /* **************************************************** */
 
-        // Get a camera image.
-        Mat image = api.getMatNavCam();
-        api.saveMatImage(image, "Area1.png");
-
-        // Detect AR Tag
-        Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250);
-        List<Mat> corners = new ArrayList<>();
-        Mat ids = new Mat();
-        DetectorParameters parameters = DetectorParameters.create();
-        Aruco.detectMarkers(image, dictionary, corners, ids, parameters);
-
         // Get camera matrix
         Mat cameraMatrix = new Mat(3, 3, CvType.CV_64F);
         cameraMatrix.put(0, 0, api.getNavCamIntrinsics()[0]);
@@ -103,10 +93,21 @@ public class YourService extends KiboRpcService {
         cameraCoefficients.put(0, 0, api.getNavCamIntrinsics()[1]);
         cameraCoefficients.convertTo(cameraCoefficients, CvType.CV_64F);
 
+        // Get a camera image.
+        Mat image = api.getMatNavCam();
+        api.saveMatImage(image, "Area1.png");
+
         // Undistorted image
         Mat undistortImg = new Mat();
         Calib3d.undistort(image, undistortImg, cameraMatrix, cameraCoefficients);
         api.saveMatImage(undistortImg, "Area1UndistortImage.png");
+
+        // Detect AR Tag
+        Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250);
+        List<Mat> corners = new ArrayList<>();
+        Mat ids = new Mat();
+        DetectorParameters parameters = DetectorParameters.create();
+        Aruco.detectMarkers(image, dictionary, corners, ids, parameters);
 
         // Get Pose Estimation
         float markerLength = 0.05f; //meters
@@ -129,7 +130,6 @@ public class YourService extends KiboRpcService {
             double[] translationVectorArray = new double[3];
             translationVectors.row(0).get(0, 0, translationVectorArray);
             point = new Point((float) translationVectorArray[0], (float) translationVectorArray[2], (float) translationVectorArray[1]);
-            Log.i(TAG, "Point X: " + point.getX() + ", Y: " + point.getY() + ", Z: " + point.getZ());
 
             /*
             * Getting Robot's current Position
@@ -142,7 +142,7 @@ public class YourService extends KiboRpcService {
             Kinematics currentKinematics = api.getRobotKinematics();
             Point currentPosition = currentKinematics.getPosition();
             float x = (float) (currentPosition.getX() + translationVectorArray[0]);
-            float y = (float) (currentPosition.getY() + translationVectorArray[2]);
+            float y = (float) (currentPosition.getY() - translationVectorArray[2]);
             float z = (float) (currentPosition.getZ() + translationVectorArray[1]);
             if (x < 10.3){x = 10.3f;}
             if (x > 11.55){x = 11.55f;}
@@ -165,50 +165,34 @@ public class YourService extends KiboRpcService {
         image = api.getMatNavCam();
         api.saveMatImage(image, "Area1Closer.png");
 
+        // Undistorted image
+        undistortImg = new Mat();
+        Calib3d.undistort(image, undistortImg, cameraMatrix, cameraCoefficients);
+        api.saveMatImage(undistortImg, "Area1CloserUndistortImage.png");
+
+        // Cropping image
+        Mat thresh = new Mat();
+        Imgproc.threshold(undistortImg, thresh, 50, 255, Imgproc.THRESH_BINARY);
+        List<MatOfPoint> contours = new ArrayList<>();
+        Mat hierarchy = new Mat();
+        Imgproc.findContours(thresh, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+        Rect boundingRect = null;
+        for (MatOfPoint contour : contours) {
+            Rect rect = Imgproc.boundingRect(contour);
+            if (rect.width > 50 && rect.height > 50) {
+                boundingRect = rect;
+                break;
+            }
+        }
+        Mat croppedImage = (boundingRect != null) ? new Mat(undistortImg, boundingRect) : new Mat();
+        croppedImage = resizeImg(croppedImage, 500);
+
         // Pattern Matching
         // Load Lost Item images
-        Mat[] lostItems = new Mat[LOST_ITEM_FILE_NAME.length];
-        for (int i = 0; i < LOST_ITEM_FILE_NAME.length; i++) {
-            try{
-                InputStream inputStream = getAssets().open(LOST_ITEM_FILE_NAME[i]);
-                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-                Mat mat = new Mat();
-                Utils.bitmapToMat(bitmap, mat);
-
-                // convert to grayscale
-                Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2GRAY);
-
-                // Assign to an array of templates
-                lostItems[i] = mat;
-
-                inputStream.close();
-            }
-            catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        Mat[] lostItems = patternMatching(LOST_ITEM_FILE_NAME);
 
         // Load Treasure Item Images
-        Mat[] treasures = new Mat[TREASURE_FILE_NAME.length];
-        for (int i = 0; i < TREASURE_FILE_NAME.length; i++) {
-            try{
-                InputStream inputStream = getAssets().open(TREASURE_FILE_NAME[i]);
-                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-                Mat mat = new Mat();
-                Utils.bitmapToMat(bitmap, mat);
-
-                // convert to grayscale
-                Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2GRAY);
-
-                // Assign to an array of templates
-                treasures[i] = mat;
-
-                inputStream.close();
-            }
-            catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        Mat[] treasures = patternMatching(TREASURE_FILE_NAME);
 
         // Number of matches for each template
         int lostItemMatchCnt[] = new int[lostItems.length];
@@ -221,7 +205,7 @@ public class YourService extends KiboRpcService {
 
             // Loading template image and target Image
             Mat lostItem = lostItems[tempNum].clone();
-            Mat targetImg = undistortImg.clone();
+            Mat targetImg = croppedImage.clone();
 
             int widthMin = 20;
             int widthMax = 100;
@@ -240,7 +224,7 @@ public class YourService extends KiboRpcService {
                     Imgproc.matchTemplate(targetImg, rotateResizedTemp, result, Imgproc.TM_CCOEFF_NORMED);
 
                     // Get coordinates with similarity greater than or equal to the threshold
-                    double threshold = 0.7;
+                    double threshold = 0.8;
                     Core.MinMaxLocResult mmlr = Core.minMaxLoc(result);
                     double maxVal = mmlr.maxVal;
                     if (maxVal >= threshold){
@@ -429,7 +413,7 @@ public class YourService extends KiboRpcService {
         return new Quaternion((float) x, (float) y, (float) z, (float) w);
     }
 
-    private static Quaternion multiplyQuaternions(Quaternion q1, Quaternion q2) {
+    private Quaternion multiplyQuaternions(Quaternion q1, Quaternion q2) {
         float w1 = q1.getW();
         float x1 = q1.getX();
         float y1 = q1.getY();
@@ -447,5 +431,29 @@ public class YourService extends KiboRpcService {
         float z = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2;
 
         return new Quaternion(x, y, z, w);
+    }
+
+    private Mat[] patternMatching(String[] templateFileName){
+        Mat[] result = new Mat[templateFileName.length];
+        for (int i = 0; i < templateFileName.length; i++) {
+            try{
+                InputStream inputStream = getAssets().open(templateFileName[i]);
+                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+                Mat mat = new Mat();
+                Utils.bitmapToMat(bitmap, mat);
+
+                // convert to grayscale
+                Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2GRAY);
+
+                // Assign to an array of templates
+                result[i] = mat;
+
+                inputStream.close();
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
     }
 }
