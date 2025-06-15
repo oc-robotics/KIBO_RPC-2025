@@ -2,6 +2,7 @@ package jp.jaxa.iss.kibo.rpc.defaultapk;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.util.Log;
 
 import gov.nasa.arc.astrobee.Kinematics;
 import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
@@ -32,26 +33,22 @@ import org.opencv.imgproc.Imgproc;
 
 public class YourService extends KiboRpcService {
 
-    private final String[] TEMPLATE_FILE_NAME = {
+    private final String TAG = this.getClass().getSimpleName();
+
+    private final String[] LOST_ITEM_FILE_NAME = {
             "coin.png",
             "compass.png",
             "coral.png",
-            "crystal.png",
-            "diamond.png",
-            "emerald.png",
             "fossil.png",
             "key.png",
             "letter.png",
             "shell.png",
             "treasure_box.png"
     };
-    private final String[] TEMPLATE_NAME = {
+    private final String[] LOST_ITEM_NAME = {
             "coin",
             "compass",
             "coral",
-            "crystal",
-            "diamond",
-            "emerald",
             "fossil",
             "key",
             "letter",
@@ -59,19 +56,32 @@ public class YourService extends KiboRpcService {
             "treasure_box"
     };
 
+    private final String[] TREASURE_FILE_NAME = {
+            "crystal.png",
+            "diamond.png",
+            "emerald.png"
+    };
+
+    private final String[] TREASURE_NAME = {
+            "crystal",
+            "diamond",
+            "emerald"
+    };
+
+
     @Override
     protected void runPlan1() {
         // The mission starts.
         api.startMission();
 
-        // Move to a point.
+        // Move to area 1
         Point point = new Point(10.9d, -9.92284d, 5.195d);
         Quaternion quaternion = new Quaternion(0f, 0f, -0.707f, 0.707f);
         api.moveTo(point, quaternion, false);
 
-        /* *************************************************** */
-        /* OpenCV image processes from tutorial */
-        /* *************************************************** */
+        /* **************************************************** */
+        /* ******* OpenCV image processes from tutorial ******* */
+        /* **************************************************** */
 
         // Get a camera image.
         Mat image = api.getMatNavCam();
@@ -93,6 +103,11 @@ public class YourService extends KiboRpcService {
         cameraCoefficients.put(0, 0, api.getNavCamIntrinsics()[1]);
         cameraCoefficients.convertTo(cameraCoefficients, CvType.CV_64F);
 
+        // Undistorted image
+        Mat undistortImg = new Mat();
+        Calib3d.undistort(image, undistortImg, cameraMatrix, cameraCoefficients);
+        api.saveMatImage(undistortImg, "Area1UndistortImage.png");
+
         // Get Pose Estimation
         float markerLength = 0.05f; //meters
         Mat rotationVectors = new Mat();
@@ -102,18 +117,19 @@ public class YourService extends KiboRpcService {
         // Convert rotation and translation vectors to Point and Quaternion
         if (ids.rows() > 0){
             // rotation
-            double[] rotationVectorArray = new double[3];
-            rotationVectors.row(0).get(0, 0, rotationVectorArray);
-            Mat rotation = new Mat(3, 1, CvType.CV_64F);
-            rotation.put(0, 0, rotationVectorArray);
-            Mat rotationMatrix = new Mat();
-            Calib3d.Rodrigues(rotation, rotationMatrix);
-            quaternion = rotationMatrixToAstrobeeQuaternion(rotationMatrix);
+//            double[] rotationVectorArray = new double[3];
+//            rotationVectors.row(0).get(0, 0, rotationVectorArray);
+//            Mat rotation = new Mat(3, 1, CvType.CV_64F);
+//            rotation.put(0, 0, rotationVectorArray);
+//            Mat rotationMatrix = new Mat();
+//            Calib3d.Rodrigues(rotation, rotationMatrix);
+//            quaternion = rotationMatrixToAstrobeeQuaternion(rotationMatrix);
 
             // translation
             double[] translationVectorArray = new double[3];
             translationVectors.row(0).get(0, 0, translationVectorArray);
-            point = new Point((float) translationVectorArray[0], (float) translationVectorArray[1], (float) translationVectorArray[2]);
+            point = new Point((float) translationVectorArray[0], (float) translationVectorArray[2], (float) translationVectorArray[1]);
+            Log.i(TAG, "Point X: " + point.getX() + ", Y: " + point.getY() + ", Z: " + point.getZ());
 
             /*
             * Getting Robot's current Position
@@ -123,37 +139,38 @@ public class YourService extends KiboRpcService {
             * Y-axis: Points down of camera
             * Z-axis: Points forward (away from the camera)
             */
-            Kinematics currentKinematrics = api.getRobotKinematics();
-            point = new Point(
-                    (float) (currentKinematrics.getPosition().getX() - translationVectorArray[0]),
-                    (float) (currentKinematrics.getPosition().getY() - translationVectorArray[2]),
-                    (float) (currentKinematrics.getPosition().getZ() - translationVectorArray[1])
-            );
-            float theta = (float) (-Math.PI / 2.0);
-            Quaternion offsetQuat = new Quaternion(
-                    (float) Math.sin(theta / 2.0),
-                    0.0f,
-                    0.0f,
-                    (float) Math.cos(theta / 2.0)
-            );
-            quaternion = multiplyQuaternions(offsetQuat, quaternion);
+            Kinematics currentKinematics = api.getRobotKinematics();
+            Point currentPosition = currentKinematics.getPosition();
+            float x = (float) (currentPosition.getX() + translationVectorArray[0]);
+            float y = (float) (currentPosition.getY() + translationVectorArray[2]);
+            float z = (float) (currentPosition.getZ() + translationVectorArray[1]);
+            if (x < 10.3){x = 10.3f;}
+            if (x > 11.55){x = 11.55f;}
+            if (y < -10.2){y = -10.2f;}
+            if (y > -6.0){y = -6.0f;}
+            if (z < 4.32){z = 4.32f;}
+            if (z > 5.57){z = 5.57f;}
+            point = new Point(x, y, z);
+//            float theta = (float) (-Math.PI / 2.0);
+//            Quaternion offsetQuat = new Quaternion(
+//                    (float) Math.sin(theta / 2.0),
+//                    0.0f,
+//                    0.0f,
+//                    (float) Math.cos(theta / 2.0)
+//            );
+//            quaternion = multiplyQuaternions(offsetQuat, quaternion);
             api.moveTo(point, quaternion, true);
         }
 
         image = api.getMatNavCam();
         api.saveMatImage(image, "Area1Closer.png");
 
-        // Undistorted image
-        Mat undistortImg = new Mat();
-        Calib3d.undistort(image, undistortImg, cameraMatrix, cameraCoefficients);
-        api.saveMatImage(undistortImg, "Area1UndistortImage.png");
-
         // Pattern Matching
-        // Load template images
-        Mat[] templates = new Mat[TEMPLATE_FILE_NAME.length];
-        for (int i = 0; i < TEMPLATE_FILE_NAME.length; i++) {
+        // Load Lost Item images
+        Mat[] lostItems = new Mat[LOST_ITEM_FILE_NAME.length];
+        for (int i = 0; i < LOST_ITEM_FILE_NAME.length; i++) {
             try{
-                InputStream inputStream = getAssets().open(TEMPLATE_FILE_NAME[i]);
+                InputStream inputStream = getAssets().open(LOST_ITEM_FILE_NAME[i]);
                 Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
                 Mat mat = new Mat();
                 Utils.bitmapToMat(bitmap, mat);
@@ -162,7 +179,29 @@ public class YourService extends KiboRpcService {
                 Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2GRAY);
 
                 // Assign to an array of templates
-                templates[i] = mat;
+                lostItems[i] = mat;
+
+                inputStream.close();
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // Load Treasure Item Images
+        Mat[] treasures = new Mat[TREASURE_FILE_NAME.length];
+        for (int i = 0; i < TREASURE_FILE_NAME.length; i++) {
+            try{
+                InputStream inputStream = getAssets().open(TREASURE_FILE_NAME[i]);
+                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+                Mat mat = new Mat();
+                Utils.bitmapToMat(bitmap, mat);
+
+                // convert to grayscale
+                Imgproc.cvtColor(mat, mat, Imgproc.COLOR_BGR2GRAY);
+
+                // Assign to an array of templates
+                treasures[i] = mat;
 
                 inputStream.close();
             }
@@ -172,15 +211,16 @@ public class YourService extends KiboRpcService {
         }
 
         // Number of matches for each template
-        int templateMatchCnt[] = new int[templates.length];
+        int lostItemMatchCnt[] = new int[lostItems.length];
 
         // Get the number of template matches
-        for (int tempNum = 0; tempNum < templates.length; tempNum++){
+        for (int tempNum = 0; tempNum < lostItems.length; tempNum++){
+            int matchCnt = 0;
             // Number of matches
             List<org.opencv.core.Point> matches = new ArrayList<>();
 
             // Loading template image and target Image
-            Mat template = templates[tempNum].clone();
+            Mat lostItem = lostItems[tempNum].clone();
             Mat targetImg = undistortImg.clone();
 
             int widthMin = 20;
@@ -190,7 +230,7 @@ public class YourService extends KiboRpcService {
 
             for (int size = widthMin; size <= widthMax; size += changeWidth){
                 for (int angle = 0; angle <= 360; angle += changeAngle){
-                    Mat resizedTemp = resizeImg(template, size);
+                    Mat resizedTemp = resizeImg(lostItem, size);
                     Mat rotateResizedTemp = rotateImg(resizedTemp, angle);
 
                     // result outputs value from 0-1
@@ -200,18 +240,18 @@ public class YourService extends KiboRpcService {
                     Imgproc.matchTemplate(targetImg, rotateResizedTemp, result, Imgproc.TM_CCOEFF_NORMED);
 
                     // Get coordinates with similarity greater than or equal to the threshold
-                    double threshold = 0.8;
+                    double threshold = 0.7;
                     Core.MinMaxLocResult mmlr = Core.minMaxLoc(result);
                     double maxVal = mmlr.maxVal;
                     if (maxVal >= threshold){
                         // Extract only results greater than or euqal to the threshold
-                        Mat thresholdedResult = new Mat();
-                        Imgproc.threshold(result, thresholdedResult, threshold, 1.0, Imgproc.THRESH_TOZERO);
+                        Mat thresholdResult = new Mat();
+                        Imgproc.threshold(result, thresholdResult, threshold, 1.0, Imgproc.THRESH_TOZERO);
 
                         // Get coordinates of the matched location
-                        for (int y = 0; y < thresholdedResult.rows(); y++){
-                            for (int x = 0; x < thresholdedResult.cols(); x++){
-                                if (thresholdedResult.get(y, x)[0] > 0){
+                        for (int y = 0; y < thresholdResult.rows(); y++){
+                            for (int x = 0; x < thresholdResult.cols(); x++){
+                                if (thresholdResult.get(y, x)[0] > 0){
                                     matches.add(new org.opencv.core.Point(x, y));
                                 }
                             }
@@ -222,13 +262,14 @@ public class YourService extends KiboRpcService {
 
             // Avoid detecting the same location multiple times
             List<org.opencv.core.Point> filteredMatches = removeDuplicates(matches);
+            matchCnt += filteredMatches.size();
 
             // Number of matches for each template
-            templateMatchCnt[tempNum] = filteredMatches.size();
+            lostItemMatchCnt[tempNum] = matchCnt;
         }
 
-        int mostMatchTemplateNum = getMaxIndex(templateMatchCnt);
-        api.setAreaInfo(1, TEMPLATE_NAME[mostMatchTemplateNum], templateMatchCnt[mostMatchTemplateNum]);
+        int mostMatchTemplateNum = getMaxIndex(lostItemMatchCnt);
+        api.setAreaInfo(1, LOST_ITEM_NAME[mostMatchTemplateNum], lostItemMatchCnt[mostMatchTemplateNum]);
 
         /* **************************************************** */
         /* Let's move to each area and recognize the items. */
