@@ -19,9 +19,25 @@ public class YourService extends KiboRpcService {
         api.startMission();
 
         // Move to a point.
-        Point point = new Point(10.9d, -9.92284d, 5.195d);
-        Quaternion quaternion = new Quaternion(0f, 0f, -0.707f, 0.707f);
-        api.moveTo(point, quaternion, false);
+//        Point point = new Point(11.48d, -10.58d, 5.57d);
+        Point[] points = {
+                new Point(10.42d, -10.58d, 4.82d),
+                new Point(10.3d, -9.25d, 3.76203d),
+                new Point(10.3d, -8.4d, 3.76093d),
+                new Point(9.866984d, -7.34d, 4.32d)
+        };
+
+        Quaternion[] quaternions = {
+                new Quaternion(0f, 0f, -0.707f, 0.707f),
+                new Quaternion(0.2f, 0.2f, 0.2f, 0.94f),
+                new Quaternion(0f, 0.707f, 0f, 0.707f),
+                new Quaternion(-0.5f, 0.5f, -0.5f, 0.5f)
+        };
+
+        for (int i = 0; i < points.length; i++) {
+            api.moveTo(points[i], quaternions[i], false);
+        }
+
 
         // Get a camera image.
         Mat image = api.getMatNavCam();
@@ -48,8 +64,8 @@ public class YourService extends KiboRpcService {
         /* **************************************************** */
 
         // When you move to the front of the astronaut, report the rounding completion.
-        point = new Point(11.143d, -6.7607d, 4.9654d);
-        quaternion = new Quaternion(0f, 0f, 0.707f, 0.707f);
+        Point point = new Point(11.143d, -6.7607d, 4.9654d);
+        Quaternion quaternion = new Quaternion(0f, 0f, 0.707f, 0.707f);
         api.moveTo(point, quaternion, false);
         api.reportRoundingCompletion();
 
