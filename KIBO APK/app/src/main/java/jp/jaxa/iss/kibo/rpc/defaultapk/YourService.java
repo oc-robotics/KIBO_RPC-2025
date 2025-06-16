@@ -24,7 +24,9 @@ import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
@@ -70,13 +72,244 @@ public class YourService extends KiboRpcService {
             "emerald"
     };
 
+    // Image processing by Crop
     @Override
     protected void runPlan1() {
         // The mission starts.
         api.startMission();
 
         // Move to area 1
-        Point point =  new Point(11d, -10.58d, 5d);
+        Point point = new Point(10.9d, -9.92284d, 5.195d);
+        Quaternion quaternion = new Quaternion(0f, 0f, -0.707f, 0.707f);
+        api.moveTo(point, quaternion, false);
+
+        /* **************************************************** */
+        /* ******* OpenCV image processes from tutorial ******* */
+        /* **************************************************** */
+
+        // Get camera matrix
+        Mat cameraMatrix = new Mat(3, 3, CvType.CV_64F);
+        cameraMatrix.put(0, 0, api.getNavCamIntrinsics()[0]);
+
+        // Get Lens distortion parameters
+        Mat cameraCoefficients = new Mat(1, 5, CvType.CV_64F);
+        cameraCoefficients.put(0, 0, api.getNavCamIntrinsics()[1]);
+        cameraCoefficients.convertTo(cameraCoefficients, CvType.CV_64F);
+
+        // Get a camera image.
+        Mat image = api.getMatNavCam();
+        api.saveMatImage(image, "Area1.png");
+
+        // Undistorted image
+        Mat undistortImg = new Mat();
+        Calib3d.undistort(image, undistortImg, cameraMatrix, cameraCoefficients);
+        api.saveMatImage(undistortImg, "Area1UndistortImage.png");
+
+        // Detect AR Tag
+        Dictionary dictionary = Aruco.getPredefinedDictionary(Aruco.DICT_5X5_250);
+        List<Mat> corners = new ArrayList<>();
+        Mat ids = new Mat();
+        DetectorParameters parameters = DetectorParameters.create();
+        Aruco.detectMarkers(image, dictionary, corners, ids, parameters);
+
+        // Cropping image
+        Mat croppedImage = new Mat();
+        if (!corners.isEmpty() && !ids.empty()){
+            // convert corners to org.opencv.core.Point array
+            Mat markerCornersMat = corners.get(0);
+            org.opencv.core.Point[] markerPoints = new org.opencv.core.Point[4];
+            for (int i = 0; i < 4; i++){
+                double[] data = markerCornersMat.get(0, i);
+                markerPoints[i] = new org.opencv.core.Point(data[0], data[1]);
+            }
+            /* Expected order:
+             * markerPoints[0] = top-left
+             * markerPoints[1] = top-right
+             * markerPoints[2] = bottom-right
+             * markerPoints[3] = bottom-left
+             */
+
+            // Compute the Scale (pixels per centimeter)
+            double markerPixelWidth = Math.hypot(markerPoints[1].x - markerPoints[0].x, markerPoints[1].y - markerPoints[0].y);
+            double pixelsPerCentimeter = markerPixelWidth / 5.0;
+
+            // Compute unit vector along marker's top edge (dX) nad perpendicular unit vector (dY) pointing downward
+            double dx = markerPoints[1].x - markerPoints[0].x;
+            double dy = markerPoints[1].y - markerPoints[0].y;
+            double magnitude = Math.hypot(dx, dy);
+            org.opencv.core.Point dX = new org.opencv.core.Point(dx / magnitude, dy / magnitude);
+            org.opencv.core.Point dY = new org.opencv.core.Point(-dX.y, dX.x);
+
+            // Compute target image layout using physical offsets
+            /* Physical Parameters
+             * Width: 27cm
+             * Height: 15cm
+             * marker top edge: 1.25cm tall
+             * marker right edge: 1.25cm wide
+             */
+            org.opencv.core.Point layoutTopRight = new org.opencv.core.Point(
+                    markerPoints[1].x + (1.25 * pixelsPerCentimeter * dX.x),
+                    markerPoints[1].y + (1.25 * pixelsPerCentimeter * dX.y)
+            );
+            org.opencv.core.Point layoutTopLeft = new org.opencv.core.Point(
+                    layoutTopRight.x - (27.0 * pixelsPerCentimeter * dX.x),
+                    layoutTopRight.y - (27.0 * pixelsPerCentimeter * dX.y)
+            );
+            org.opencv.core.Point layoutBottomLeft = new org.opencv.core.Point(
+                    layoutTopLeft.x + (15.0 * pixelsPerCentimeter * dY.x),
+                    layoutTopLeft.y + (15.0 * pixelsPerCentimeter * dY.y)
+            );
+            org.opencv.core.Point layoutBottomRight = new org.opencv.core.Point(
+                    layoutTopRight.x + (15.0 * pixelsPerCentimeter * dY.x),
+                    layoutTopRight.y + (15.0 * pixelsPerCentimeter * dY.y)
+            );
+
+            // save debugging image (getting corners)
+            Mat preCropImage = undistortImg.clone();
+            Scalar color = new Scalar(0, 255, 0);
+            int radius = 5;
+            int thickness = 2;
+            Imgproc.circle(preCropImage, layoutTopLeft, radius, color, thickness);
+            Imgproc.circle(preCropImage, layoutTopRight, radius, color, thickness);
+            Imgproc.circle(preCropImage, layoutBottomLeft, radius, color, thickness);
+            Imgproc.circle(preCropImage, layoutBottomRight, radius, color, thickness);
+            api.saveMatImage(preCropImage, "debug_layout_precrop.png");
+
+            // Apply Persepctive Transformation
+            MatOfPoint2f sourcePoints = new MatOfPoint2f(
+                    layoutTopLeft,
+                    layoutTopRight,
+                    layoutBottomRight,
+                    layoutBottomLeft
+            );
+            Size targetSize = new Size(27.0 * pixelsPerCentimeter, 15.0 * pixelsPerCentimeter);
+            MatOfPoint2f destinationPoints = new MatOfPoint2f(
+                    new org.opencv.core.Point(0, 0),
+                    new org.opencv.core.Point(targetSize.width - 1, 0),
+                    new org.opencv.core.Point(targetSize.width - 1, targetSize.height - 1),
+                    new org.opencv.core.Point(0, targetSize.height - 1)
+            );
+            Mat transform = Imgproc.getPerspectiveTransform(sourcePoints, destinationPoints);
+            Imgproc.warpPerspective(image, croppedImage, transform, targetSize);
+            api.saveMatImage(croppedImage, "croppedImage.png");
+
+            // logging cropping variables for debug
+            Log.i(TAG, "Image size: " + croppedImage.size());
+            Log.i(TAG, "Computed target size: " + targetSize);
+            Log.i(TAG, "Top Left: " + layoutTopLeft);
+            Log.i(TAG, "Top Right: " + layoutTopRight);
+            Log.i(TAG, "Bottom Left: " + layoutBottomLeft);
+            Log.i(TAG, "Bottom Right: " + layoutBottomRight);
+        }
+
+        // Pattern Matching
+        // Load Lost Item images
+        Mat[] lostItems = patternMatching(LOST_ITEM_FILE_NAME);
+
+        // Load Treasure Item Images
+        Mat[] treasures = patternMatching(TREASURE_FILE_NAME);
+
+        // Number of matches for each template
+        int lostItemMatchCnt[] = new int[lostItems.length];
+
+        // Get the number of template matches
+        for (int tempNum = 0; tempNum < lostItems.length; tempNum++){
+            int matchCnt = 0;
+            // Number of matches
+            List<org.opencv.core.Point> matches = new ArrayList<>();
+
+            // Loading template image and target Image
+            Mat lostItem = lostItems[tempNum].clone();
+            Mat targetImg = croppedImage.clone();
+
+            int widthMin = (int) (targetImg.width() * 0.1);
+            int widthMax = (int) (targetImg.width() * 0.5);
+            int changeWidth = (int) (targetImg.width() * 0.05);
+            int changeAngle = 45;
+
+            Log.i(TAG, "widthMin: " + widthMin);
+            Log.i(TAG, "widthMax: " + widthMax);
+            Log.i(TAG, "changeWidth:" + changeWidth);
+            Log.i(TAG, "changeAngle: " + changeAngle);
+
+            for (int size = widthMin; size <= widthMax; size += changeWidth){
+                for (int angle = 0; angle <= 360; angle += changeAngle){
+                    Mat resizedTemp = resizeImg(lostItem, size);
+                    Mat rotateResizedTemp = rotateImg(resizedTemp, angle);
+
+                    if (targetImg.width() > rotateResizedTemp.width() || targetImg.height() > rotateResizedTemp.height()){
+                        // result outputs value from 0-1
+                        // 0: bad match
+                        // 1: perfect match
+                        Mat result = new Mat();
+                        Imgproc.matchTemplate(targetImg, rotateResizedTemp, result, Imgproc.TM_CCOEFF_NORMED);
+
+                        // Get coordinates with similarity greater than or equal to the threshold
+                        double threshold = 0.8;
+                        Core.MinMaxLocResult mmlr = Core.minMaxLoc(result);
+                        double maxVal = mmlr.maxVal;
+                        if (maxVal >= threshold){
+                            // Extract only results greater than or euqal to the threshold
+                            Mat thresholdResult = new Mat();
+                            Imgproc.threshold(result, thresholdResult, threshold, 1.0, Imgproc.THRESH_TOZERO);
+
+                            // Get coordinates of the matched location
+                            for (int y = 0; y < thresholdResult.rows(); y++){
+                                for (int x = 0; x < thresholdResult.cols(); x++){
+                                    if (thresholdResult.get(y, x)[0] > 0){
+                                        matches.add(new org.opencv.core.Point(x, y));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Avoid detecting the same location multiple times
+            List<org.opencv.core.Point> filteredMatches = removeDuplicates(matches);
+            matchCnt += filteredMatches.size();
+
+            // Number of matches for each template
+            lostItemMatchCnt[tempNum] = matchCnt;
+        }
+
+        int mostMatchTemplateNum = getMaxIndex(lostItemMatchCnt);
+        api.setAreaInfo(1, LOST_ITEM_NAME[mostMatchTemplateNum], lostItemMatchCnt[mostMatchTemplateNum]);
+
+        /* ************************************************ */
+        /* Let's move to each area and recognize the items. */
+        /* ************************************************ */
+
+        // When you move to the front of the astronaut, report the rounding completion.
+        point = new Point(11.143d, -6.7607d, 4.9654d);
+        quaternion = new Quaternion(0f, 0f, 0.707f, 0.707f);
+        api.moveTo(point, quaternion, false);
+        api.reportRoundingCompletion();
+
+        /* ***************************************************************** */
+        /* Write your code to recognize which target item the astronaut has. */
+        /* ***************************************************************** */
+
+        // Let's notify the astronaut when you recognize it.
+        api.notifyRecognitionItem();
+
+        /* ******************************************************************************************************* */
+        /* Write your code to move Astrobee to the location of the target item (what the astronaut is looking for) */
+        /* ******************************************************************************************************* */
+
+        // Take a snapshot of the target item.
+        api.takeTargetItemSnapshot();
+    }
+
+    // Image Processing By Moving Closer and Crop
+    @Override
+    protected void runPlan2() {
+        // The mission starts.
+        api.startMission();
+
+        // Move to area 1
+        Point point = new Point(10.9d, -9.92284d, 5.195d);
         Quaternion quaternion = new Quaternion(0f, 0f, -0.707f, 0.707f);
         api.moveTo(point, quaternion, false);
 
@@ -288,11 +521,6 @@ public class YourService extends KiboRpcService {
 
         // Take a snapshot of the target item.
         api.takeTargetItemSnapshot();
-    }
-
-    @Override
-    protected void runPlan2() {
-        // write your plan 2 here.
     }
 
     @Override
